@@ -50,14 +50,18 @@ func NewClient(config *ClientConfiguration) (Client, error) {
 		EnableAlphaFeatures: config.EnableAlphaFeatures,
 		httpClient:          httpClient,
 	}
-	c.doRequestFunc = c.doRequest
 
 	if config.AuthConfig != nil {
 		if config.AuthConfig.BasicAuthConfig == nil {
 			return nil, errors.New("BasicAuthConfig is required if AuthConfig is provided")
 		}
 
-		c.BasicAuthConfig = config.AuthConfig.BasicAuthConfig
+		c.doRequestFunc = func(req *http.Request) (*http.Response, error) {
+			req.SetBasicAuth(config.AuthConfig.BasicAuthConfig.Username, config.AuthConfig.BasicAuthConfig.Password)
+			return c.httpClient.Do(req)
+		}
+	} else {
+		c.doRequestFunc = c.httpClient.Do
 	}
 
 	return c, nil
@@ -72,7 +76,6 @@ type client struct {
 	Name                string
 	URL                 string
 	APIVersion          APIVersion
-	BasicAuthConfig     *BasicAuthConfig
 	EnableAlphaFeatures bool
 	Verbose             bool
 
@@ -122,10 +125,6 @@ func (c *client) prepareAndDo(method, URL string, params map[string]string, body
 	request.Header.Set(XBrokerAPIVersion, c.APIVersion.HeaderValue())
 	if bodyReader != nil {
 		request.Header.Set(contentType, jsonType)
-	}
-
-	if c.BasicAuthConfig != nil {
-		request.SetBasicAuth(c.BasicAuthConfig.Username, c.BasicAuthConfig.Password)
 	}
 
 	if params != nil {
