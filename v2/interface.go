@@ -5,10 +5,11 @@ import (
 )
 
 // AuthConfig is a union-type representing the possible auth configurations a
-// client may use to authenticate to a broker.  Currently, only basic auth is
-// supported.
+// client may use to authenticate to a broker.
 type AuthConfig struct {
 	BasicAuthConfig *BasicAuthConfig
+	// json key for OAuth authentication
+	OAuthJWT []byte
 }
 
 // BasicAuthConfig represents a set of basic auth credentials.

@@ -2,9 +2,11 @@ package v2
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	"golang.org/x/oauth2/google"
 )
 
 const (
@@ -52,13 +55,28 @@ func NewClient(config *ClientConfiguration) (Client, error) {
 	}
 
 	if config.AuthConfig != nil {
-		if config.AuthConfig.BasicAuthConfig == nil {
-			return nil, errors.New("BasicAuthConfig is required if AuthConfig is provided")
-		}
-
-		c.doRequestFunc = func(req *http.Request) (*http.Response, error) {
-			req.SetBasicAuth(config.AuthConfig.BasicAuthConfig.Username, config.AuthConfig.BasicAuthConfig.Password)
-			return c.httpClient.Do(req)
+		if config.AuthConfig.BasicAuthConfig != nil {
+			c.doRequestFunc = func(req *http.Request) (*http.Response, error) {
+				req.SetBasicAuth(config.AuthConfig.BasicAuthConfig.Username, config.AuthConfig.BasicAuthConfig.Password)
+				return c.httpClient.Do(req)
+			}
+		} else if config.AuthConfig.OAuthJWT != nil {
+			jwtConfig, err := google.JWTConfigFromJSON(config.AuthConfig.OAuthJWT)
+			if err != nil {
+				return nil, fmt.Errorf("Error getting JWT Config from json: %v", err)
+			}
+			// TODO change context?
+			tokenSrc := jwtConfig.TokenSource(context.Background())
+			c.doRequestFunc = func(req *http.Request) (*http.Response, error) {
+				token, err := tokenSrc.Token()
+				if err != nil {
+					return nil, fmt.Errorf("Error getting token: %v", err)
+				}
+				token.SetAuthHeader(req)
+				return c.httpClient.Do(req)
+			}
+		} else {
+			return nil, errors.New("AuthConfig provided but with no values")
 		}
 	} else {
 		c.doRequestFunc = c.httpClient.Do
