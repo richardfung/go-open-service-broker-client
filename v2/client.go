@@ -60,11 +60,13 @@ func NewClient(config *ClientConfiguration) (Client, error) {
 				req.SetBasicAuth(config.AuthConfig.BasicAuthConfig.Username, config.AuthConfig.BasicAuthConfig.Password)
 				return c.httpClient.Do(req)
 			}
-		} else if config.AuthConfig.OAuthJWT != nil {
-			jwtConfig, err := google.JWTConfigFromJSON(config.AuthConfig.OAuthJWT)
+		} else if config.AuthConfig.OAuthConfig != nil {
+			oauthConfig := config.AuthConfig.OAuthConfig
+			jwtConfig, err := google.JWTConfigFromJSON(oauthConfig.OAuthJWT, oauthConfig.Scopes...)
 			if err != nil {
 				return nil, fmt.Errorf("Error getting JWT Config from json: %v", err)
 			}
+
 			// TODO change context?
 			tokenSrc := jwtConfig.TokenSource(context.Background())
 			c.doRequestFunc = func(req *http.Request) (*http.Response, error) {

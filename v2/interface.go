@@ -9,7 +9,7 @@ import (
 type AuthConfig struct {
 	BasicAuthConfig *BasicAuthConfig
 	// json key for OAuth authentication
-	OAuthJWT []byte
+	OAuthConfig *OAuthConfig
 }
 
 // BasicAuthConfig represents a set of basic auth credentials.
@@ -18,6 +18,12 @@ type BasicAuthConfig struct {
 	Username string
 	// Password is the basic auth password.
 	Password string
+}
+
+// Credentials for OAuth2
+type OAuthConfig struct {
+	OAuthJWT []byte
+	Scopes []string
 }
 
 // ClientConfiguration represents the configuration of a Client.
